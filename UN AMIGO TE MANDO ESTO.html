@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¿Me Quieres?</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      overflow: hidden; /* Evita el scroll cuando el video está en pantalla completa */
+    }
+    .container {
+      background-color: white;
+      padding: 30px 50px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      width: 90%;
+      position: relative; /* Para posicionar el botón 'No' */
+      transition: opacity 0.5s ease-in-out;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    button {
+      padding: 12px 25px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      position: relative; /* Para el movimiento del botón 'No' */
+    }
+    #siBtn {
+      background-color: #28a745; /* Verde */
+      color: white;
+    }
+    #siBtn:hover {
+      background-color: #218838;
+    }
+    #noBtn {
+      background-color: #dc3545; /* Rojo */
+      color: white;
+    }
+    #noBtn:hover {
+      background-color: #c82333;
+    }
+    #rickroll-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      z-index: 1000;
+    }
+    #rickroll-container video {
+      width: 100%;
+      height: 100%;
+    }
+    #ip-display {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container" id="mainContainer">
+  <h1 id="questionText">¿Me quieres?</h1>
+  <div class="buttons">
+    <button id="siBtn" onclick="handleClickSi()">Sí</button>
+    <button id="noBtn">No</button>
+  </div>
+</div>
+
+<div class="container" id="thankYouContainer" style="display: none;">
+  <h1>¡Gracias! Yo también te quiero ❤️</h1>
+  <p id="ip-display">Tu IP es: Cargando...</p>
+  <div class="buttons">
+    <button id="continueBtn" onclick="activateRickroll()">Continuar</button>
+    <button id="exitBtn" onclick="activateRickroll()">Salir</button>
+  </div>
+</div>
+
+<div id="rickroll-container"></div>
+
+<script>
+let noClickCount = 0;
+const noBtn = document.getElementById('noBtn');
+const mainContainer = document.getElementById('mainContainer');
+const thankYouContainer = document.getElementById('thankYouContainer');
+const rickrollContainer = document.getElementById('rickroll-container');
+const ipDisplayText = document.getElementById('ip-display');
+
+// Función para mover el botón "No"
+noBtn.addEventListener('mouseover', function() {
+  const containerRect = mainContainer.getBoundingClientRect();
+  const btnRect = noBtn.getBoundingClientRect();
+
+  // Genera posiciones aleatorias dentro del contenedor principal
+  const maxX = containerRect.width - btnRect.width;
+  const maxY = containerRect.height - btnRect.height;
+
+  const randomX = Math.random() * maxX;
+  const randomY = Math.random() * maxY;
+
+  // Usa propiedades CSS para mover el botón de forma absoluta dentro de su contenedor padre (.container)
+  // Ajusta por el padding del contenedor si es necesario para que no se salga
+  noBtn.style.position = 'absolute';
+  noBtn.style.left = `${randomX}px`;
+  noBtn.style.top = `${randomY}px`;
+});
+
+// Evento para el clic en "No"
+noBtn.addEventListener('click', function() {
+  noClickCount++;
+  if (noClickCount >= 2) { // Si hace clic 2 o más veces
+    activateRickroll();
+  }
+});
+
+// Función para manejar el clic en "Sí"
+function handleClickSi() {
+  mainContainer.style.opacity = '0';
+  setTimeout(() => {
+    mainContainer.style.display = 'none';
+    thankYouContainer.style.display = 'block';
+    thankYouContainer.style.opacity = '1';
+    getAndDisplayIP(); // Carga la IP
+  }, 500);
+}
+
+// Función para obtener y mostrar la IP
+function getAndDisplayIP() {
+  fetch('https://api.ipify.org?format=json')
+    .then(response => response.json())
+    .then(data => {
+      ipDisplayText.textContent = `Tu IP es: ${data.ip}`;
+    })
+    .catch(error => {
+      console.error('Error al obtener la IP:', error);
+      ipDisplayText.textContent = 'Tu IP es: No disponible';
+    });
+}
+
+// Función para activar el Rickroll
+function activateRickroll() {
+  mainContainer.style.opacity = '0';
+  thankYouContainer.style.opacity = '0';
+  setTimeout(() => {
+    mainContainer.style.display = 'none';
+    thankYouContainer.style.display = 'none';
+
+    const video = document.createElement('video');
+    video.src = "siusplau.mp4"; // Asegúrate que este nombre coincida con tu archivo
+    video.autoplay = true;
+    video.controls = false;
+    video.loop = true;
+    video.muted = false; // Queremos que tenga audio!
+
+    rickrollContainer.appendChild(video);
+    rickrollContainer.style.display = 'block';
+
+    // Pone el contenedor del video en pantalla completa
+    if (rickrollContainer.requestFullscreen) {
+      rickrollContainer.requestFullscreen();
+    } else if (rickrollContainer.mozRequestFullScreen) {
+      rickrollContainer.mozRequestFullScreen();
+    } else if (rickrollContainer.webkitRequestFullscreen) {
+      rickrollContainer.webkitRequestFullscreen();
+    } else if (rickrollContainer.msRequestFullscreen) {
+      rickrollContainer.msRequestFullscreen();
+    }
+  }, 500);
+}
+</script>
+
+</body>
+</html>
