@@ -151,6 +151,35 @@
       font-weight: bold;
       color: white;
     }
+    .comment-list {
+      margin-top: 20px;
+      text-align: left;
+      width: 90%;
+      max-width: 500px;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    .comment-item {
+      border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+    .comment-item:last-child {
+      border-bottom: none;
+    }
+    .comment-item p {
+      margin: 5px 0;
+      word-wrap: break-word;
+    }
+    .comment-item .username {
+      font-weight: bold;
+      color: #007bff;
+    }
+    .comment-item .timestamp {
+      font-size: 0.8em;
+      color: #888;
+    }
   </style>
 </head>
 <body>
@@ -193,6 +222,11 @@
     <button type="submit" id="submitFeedbackBtn">Enviar Opinión</button>
   </form>
   <div id="messageBox"></div>
+</div>
+
+<div class="comment-list" id="opinionsDisplay">
+  <h2>Opiniones de otros usuarios</h2>
+  <!-- Los comentarios se añadirán aquí dinámicamente -->
 </div>
 
 <!-- Firebase App (required) -->
@@ -238,6 +272,7 @@ const dislikeBtn = document.getElementById('dislikeBtn');
 const likeCountSpan = document.getElementById('likeCount');
 const dislikeCountSpan = document.getElementById('dislikeCount');
 const messageBox = document.getElementById('messageBox');
+const opinionsDisplay = document.getElementById('opinionsDisplay');
 
 // Lista de palabras no aptas (idealmente en el backend)
 const naughtyWords = ['tonto', 'estúpido', 'idiota', 'mala palabra', 'bobo'];
@@ -247,6 +282,21 @@ statsRef.on('value', (snapshot) => {
   const stats = snapshot.val() || { likes: 0, dislikes: 0 };
   likeCountSpan.textContent = stats.likes;
   dislikeCountSpan.textContent = stats.dislikes;
+});
+
+// Listener de Firebase para mostrar los comentarios en tiempo real
+opinionsRef.on('child_added', (snapshot) => {
+  const opinion = snapshot.val();
+  const opinionElement = document.createElement('div');
+  opinionElement.classList.add('comment-item');
+  const timestamp = opinion.timestamp ? new Date(opinion.timestamp).toLocaleString() : 'Fecha no disponible';
+  opinionElement.innerHTML = `
+    <p><span class="username">${opinion.username}</span> dijo:</p>
+    <p>"${opinion.comment}"</p>
+    <p class="timestamp">${timestamp}</p>
+  `;
+  opinionsDisplay.appendChild(opinionElement);
+  opinionsDisplay.scrollTop = opinionsDisplay.scrollHeight;
 });
 
 // Función para mover el botón "No"
