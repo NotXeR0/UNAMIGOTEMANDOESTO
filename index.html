@@ -13,9 +13,9 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh;
       background-color: #f0f0f0;
-      overflow: hidden; /* Evita el scroll cuando el video está en pantalla completa */
+      overflow-x: hidden;
     }
     .container {
       background-color: white;
@@ -24,8 +24,9 @@
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
       max-width: 500px;
       width: 90%;
-      position: relative; /* Para posicionar el botón 'No' */
+      position: relative;
       transition: opacity 0.5s ease-in-out;
+      margin-bottom: 20px;
     }
     h1 {
       color: #333;
@@ -44,17 +45,17 @@
       border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.3s ease;
-      position: relative; /* Para el movimiento del botón 'No' */
+      position: relative;
     }
     #siBtn {
-      background-color: #28a745; /* Verde */
+      background-color: #28a745;
       color: white;
     }
     #siBtn:hover {
       background-color: #218838;
     }
     #noBtn {
-      background-color: #dc3545; /* Rojo */
+      background-color: #dc3545;
       color: white;
     }
     #noBtn:hover {
@@ -79,6 +80,69 @@
       font-size: 16px;
       color: #555;
     }
+    #feedbackSection {
+      display: none;
+      margin-top: 40px;
+      background-color: white;
+      padding: 30px 50px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      width: 90%;
+      text-align: left;
+    }
+    #feedbackSection h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 25px;
+    }
+    #feedbackSection label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #555;
+    }
+    #feedbackSection input[type="text"],
+    #feedbackSection textarea {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    #feedbackSection textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .like-dislike-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .like-dislike-buttons button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    .like-dislike-buttons button.dislike {
+      background-color: #6c757d;
+    }
+    .like-dislike-buttons button:hover {
+      opacity: 0.9;
+    }
+    #submitFeedbackBtn {
+      width: 100%;
+      background-color: #28a745;
+      color: white;
+      padding: 12px;
+      font-size: 18px;
+    }
+    #submitFeedbackBtn:hover {
+      background-color: #218838;
+    }
   </style>
 </head>
 <body>
@@ -102,28 +166,90 @@
 
 <div id="rickroll-container"></div>
 
+<div class="container" id="feedbackSection" style="display: none;">
+  <h2>Deja tu opinión</h2>
+  <form id="feedbackForm">
+    <div>
+      <label for="username">Usuario:</label>
+      <input type="text" id="username" name="username" placeholder="Tu nombre de usuario" required>
+      <small id="usernameError" style="color: red; display: none;">Nombre de usuario no apto.</small>
+    </div>
+    <div>
+      <label for="comment">Opinión:</label>
+      <textarea id="comment" name="comment" placeholder="¿Qué te pareció la página?" required></textarea>
+    </div>
+    <div class="like-dislike-buttons">
+      <button type="button" id="likeBtn">👍 Me gusta (<span id="likeCount">0</span>)</button>
+      <button type="button" id="dislikeBtn" class="dislike">👎 No me gusta (<span id="dislikeCount">0</span>)</button>
+    </div>
+    <button type="submit" id="submitFeedbackBtn">Enviar Opinión</button>
+  </form>
+</div>
+
+<!-- Firebase App (required) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<!-- Firebase Realtime Database (required for this project) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <script>
+// Pega tu objeto de configuración de Firebase aquí
+// OJO: Si usas este archivo en tu propio proyecto, usa tu propio objeto firebaseConfig
+const firebaseConfig = {
+  apiKey: "AIzaSyDk9BqqvPsrdlFxoUsrHoqJ_0nd09MHNkY",
+  authDomain: "tacososossonquesos-9ca1c.firebaseapp.com",
+  projectId: "tacososossonquesos-9ca1c",
+  storageBucket: "tacososossonquesos-9ca1c.firebasestorage.app",
+  messagingSenderId: "45324809034",
+  appId: "1:45324809034:web:b98f902232c8b7fa0e87b3",
+  measurementId: "G-CJNRM9JY5K"
+};
+
+// Inicializa Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const statsRef = database.ref('stats'); // Referencia para los contadores
+const opinionsRef = database.ref('opinions'); // Referencia para las opiniones
+
+
 let noClickCount = 0;
+let liked = false;
+let disliked = false;
+
 const noBtn = document.getElementById('noBtn');
 const mainContainer = document.getElementById('mainContainer');
 const thankYouContainer = document.getElementById('thankYouContainer');
 const rickrollContainer = document.getElementById('rickroll-container');
 const ipDisplayText = document.getElementById('ip-display');
+const feedbackSection = document.getElementById('feedbackSection');
+const feedbackForm = document.getElementById('feedbackForm');
+const usernameInput = document.getElementById('username');
+const usernameError = document.getElementById('usernameError');
+const likeBtn = document.getElementById('likeBtn');
+const dislikeBtn = document.getElementById('dislikeBtn');
+const likeCountSpan = document.getElementById('likeCount');
+const dislikeCountSpan = document.getElementById('dislikeCount');
+
+// Lista de palabras no aptas (idealmente en el backend)
+const naughtyWords = ['tonto', 'estúpido', 'idiota', 'mala palabra', 'bobo'];
+
+// Listener de Firebase para actualizar los contadores en tiempo real
+statsRef.on('value', (snapshot) => {
+  const stats = snapshot.val() || { likes: 0, dislikes: 0 };
+  likeCountSpan.textContent = stats.likes;
+  dislikeCountSpan.textContent = stats.dislikes;
+});
 
 // Función para mover el botón "No"
 noBtn.addEventListener('mouseover', function() {
   const containerRect = mainContainer.getBoundingClientRect();
   const btnRect = noBtn.getBoundingClientRect();
 
-  // Genera posiciones aleatorias dentro del contenedor principal
   const maxX = containerRect.width - btnRect.width;
   const maxY = containerRect.height - btnRect.height;
 
   const randomX = Math.random() * maxX;
   const randomY = Math.random() * maxY;
 
-  // Usa propiedades CSS para mover el botón de forma absoluta dentro de su contenedor padre (.container)
-  // Ajusta por el padding del contenedor si es necesario para que no se salga
   noBtn.style.position = 'absolute';
   noBtn.style.left = `${randomX}px`;
   noBtn.style.top = `${randomY}px`;
@@ -132,7 +258,7 @@ noBtn.addEventListener('mouseover', function() {
 // Evento para el clic en "No"
 noBtn.addEventListener('click', function() {
   noClickCount++;
-  if (noClickCount >= 2) { // Si hace clic 2 o más veces
+  if (noClickCount >= 2) {
     activateRickroll();
   }
 });
@@ -144,7 +270,7 @@ function handleClickSi() {
     mainContainer.style.display = 'none';
     thankYouContainer.style.display = 'block';
     thankYouContainer.style.opacity = '1';
-    getAndDisplayIP(); // Carga la IP
+    getAndDisplayIP();
   }, 500);
 }
 
@@ -170,16 +296,26 @@ function activateRickroll() {
     thankYouContainer.style.display = 'none';
 
     const video = document.createElement('video');
-    video.src = "siusplau.mp4"; // Asegúrate que este nombre coincida con tu archivo
+    video.src = "siusplau.mp4";
     video.autoplay = true;
     video.controls = false;
-    video.loop = true;
-    video.muted = false; // Queremos que tenga audio!
+    video.loop = false;
+    video.muted = false;
 
+    video.onended = () => {
+      rickrollContainer.style.display = 'none';
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      feedbackSection.style.display = 'block';
+      feedbackSection.style.opacity = '1';
+      feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    rickrollContainer.innerHTML = '';
     rickrollContainer.appendChild(video);
     rickrollContainer.style.display = 'block';
 
-    // Pone el contenedor del video en pantalla completa
     if (rickrollContainer.requestFullscreen) {
       rickrollContainer.requestFullscreen();
     } else if (rickrollContainer.mozRequestFullScreen) {
@@ -191,8 +327,79 @@ function activateRickroll() {
     }
   }, 500);
 }
+
+// Lógica de likes y dislikes con Firebase
+likeBtn.addEventListener('click', function() {
+  if (liked) {
+    statsRef.child('likes').transaction((currentCount) => (currentCount || 0) - 1);
+    liked = false;
+  } else {
+    statsRef.child('likes').transaction((currentCount) => (currentCount || 0) + 1);
+    liked = true;
+    if (disliked) {
+      statsRef.child('dislikes').transaction((currentCount) => (currentCount || 0) - 1);
+      disliked = false;
+    }
+  }
+});
+
+dislikeBtn.addEventListener('click', function() {
+  if (disliked) {
+    statsRef.child('dislikes').transaction((currentCount) => (currentCount || 0) - 1);
+    disliked = false;
+  } else {
+    statsRef.child('dislikes').transaction((currentCount) => (currentCount || 0) + 1);
+    disliked = true;
+    if (liked) {
+      statsRef.child('likes').transaction((currentCount) => (currentCount || 0) - 1);
+      liked = false;
+    }
+  }
+});
+
+// Lógica de filtrado y envío de formulario
+usernameInput.addEventListener('input', function() {
+  const username = usernameInput.value.toLowerCase();
+  const containsNaughtyWord = naughtyWords.some(word => username.includes(word));
+  if (containsNaughtyWord) {
+    usernameError.style.display = 'block';
+    usernameInput.setCustomValidity('Nombre de usuario no apto.');
+  } else {
+    usernameError.style.display = 'none';
+    usernameInput.setCustomValidity('');
+  }
+});
+
+feedbackForm.addEventListener('submit', function(event) {
+  event.preventDefault();
+  if (!usernameInput.checkValidity()) {
+    alert('Por favor, elige un nombre de usuario apto.');
+    return;
+  }
+
+  const username = usernameInput.value;
+  const comment = document.getElementById('comment').value;
+  const newOpinion = {
+    username: username,
+    comment: comment,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  };
+
+  opinionsRef.push(newOpinion)
+    .then(() => {
+      alert('¡Gracias por tu opinión!');
+      feedbackForm.reset();
+      liked = false;
+      disliked = false;
+      likeBtn.style.backgroundColor = '#007bff';
+      dislikeBtn.style.backgroundColor = '#6c757d';
+    })
+    .catch((error) => {
+      console.error("Error al guardar la opinión:", error);
+      alert('Hubo un error al enviar tu opinión. Inténtalo de nuevo.');
+    });
+});
 </script>
 
 </body>
-
 </html>
