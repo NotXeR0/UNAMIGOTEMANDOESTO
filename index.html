@@ -130,8 +130,8 @@
     .like-dislike-buttons button.dislike {
       background-color: #6c757d;
     }
-    .like-dislike-buttons button:hover {
-      opacity: 0.9;
+    .like-dislike-buttons button.selected {
+      background-color: #4CAF50;
     }
     #submitFeedbackBtn {
       width: 100%;
@@ -142,6 +142,14 @@
     }
     #submitFeedbackBtn:hover {
       background-color: #218838;
+    }
+    #messageBox {
+      display: none;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      color: white;
     }
   </style>
 </head>
@@ -184,6 +192,7 @@
     </div>
     <button type="submit" id="submitFeedbackBtn">Enviar Opinión</button>
   </form>
+  <div id="messageBox"></div>
 </div>
 
 <!-- Firebase App (required) -->
@@ -228,6 +237,7 @@ const likeBtn = document.getElementById('likeBtn');
 const dislikeBtn = document.getElementById('dislikeBtn');
 const likeCountSpan = document.getElementById('likeCount');
 const dislikeCountSpan = document.getElementById('dislikeCount');
+const messageBox = document.getElementById('messageBox');
 
 // Lista de palabras no aptas (idealmente en el backend)
 const naughtyWords = ['tonto', 'estúpido', 'idiota', 'mala palabra', 'bobo'];
@@ -328,17 +338,34 @@ function activateRickroll() {
   }, 500);
 }
 
+// Función para mostrar mensajes personalizados
+function showMessage(message, type = 'success') {
+  messageBox.textContent = message;
+  messageBox.style.display = 'block';
+  if (type === 'success') {
+    messageBox.style.backgroundColor = '#28a745';
+  } else if (type === 'error') {
+    messageBox.style.backgroundColor = '#dc3545';
+  }
+  setTimeout(() => {
+    messageBox.style.display = 'none';
+  }, 3000);
+}
+
 // Lógica de likes y dislikes con Firebase
 likeBtn.addEventListener('click', function() {
   if (liked) {
     statsRef.child('likes').transaction((currentCount) => (currentCount || 0) - 1);
     liked = false;
+    likeBtn.classList.remove('selected');
   } else {
     statsRef.child('likes').transaction((currentCount) => (currentCount || 0) + 1);
     liked = true;
+    likeBtn.classList.add('selected');
     if (disliked) {
       statsRef.child('dislikes').transaction((currentCount) => (currentCount || 0) - 1);
       disliked = false;
+      dislikeBtn.classList.remove('selected');
     }
   }
 });
@@ -347,12 +374,15 @@ dislikeBtn.addEventListener('click', function() {
   if (disliked) {
     statsRef.child('dislikes').transaction((currentCount) => (currentCount || 0) - 1);
     disliked = false;
+    dislikeBtn.classList.remove('selected');
   } else {
     statsRef.child('dislikes').transaction((currentCount) => (currentCount || 0) + 1);
     disliked = true;
+    dislikeBtn.classList.add('selected');
     if (liked) {
       statsRef.child('likes').transaction((currentCount) => (currentCount || 0) - 1);
       liked = false;
+      likeBtn.classList.remove('selected');
     }
   }
 });
@@ -373,7 +403,7 @@ usernameInput.addEventListener('input', function() {
 feedbackForm.addEventListener('submit', function(event) {
   event.preventDefault();
   if (!usernameInput.checkValidity()) {
-    alert('Por favor, elige un nombre de usuario apto.');
+    showMessage('Por favor, elige un nombre de usuario apto.', 'error');
     return;
   }
 
@@ -387,16 +417,16 @@ feedbackForm.addEventListener('submit', function(event) {
 
   opinionsRef.push(newOpinion)
     .then(() => {
-      alert('¡Gracias por tu opinión!');
+      showMessage('¡Gracias por tu opinión!', 'success');
       feedbackForm.reset();
       liked = false;
       disliked = false;
-      likeBtn.style.backgroundColor = '#007bff';
-      dislikeBtn.style.backgroundColor = '#6c757d';
+      likeBtn.classList.remove('selected');
+      dislikeBtn.classList.remove('selected');
     })
     .catch((error) => {
       console.error("Error al guardar la opinión:", error);
-      alert('Hubo un error al enviar tu opinión. Inténtalo de nuevo.');
+      showMessage('Hubo un error al enviar tu opinión. Inténtalo de nuevo.', 'error');
     });
 });
 </script>
